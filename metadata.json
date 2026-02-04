@@ -1,0 +1,7 @@
+{
+  "name": "Nur - Islamic Companion",
+  "description": "A comprehensive, modern Islamic application featuring Quran, Prayer Times, Qibla, Dua, and Hadith collections.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
