@@ -352,7 +352,11 @@ export const QuranView: React.FC = () => {
                     )}
 
                     {settings.showTranslation && translation && (
-                      <p className="text-slate-600 dark:text-slate-300 leading-relaxed font-sans" style={{ fontSize: `${settings.translationFontSize}px` }}>
+                      <p
+                        className="text-slate-600 dark:text-slate-300 leading-relaxed font-sans"
+                        style={{ fontSize: `${settings.translationFontSize}px`, fontFamily: 'MV Faseyha, sans-serif' }}
+                        dir="rtl"
+                      >
                         {translation}
                       </p>
                     )}
