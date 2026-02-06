@@ -15,6 +15,10 @@ export const QuranView: React.FC = () => {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState(false);
 
+  // Dhivehi Tafsir PDF State
+  const [showDhivehiModal, setShowDhivehiModal] = useState(false);
+  const toggleDhivehiModal = () => setShowDhivehiModal(!showDhivehiModal);
+
   const [searchQuery, setSearchQuery] = useState('');
   const { settings } = useSettings();
 
@@ -472,15 +476,6 @@ export const QuranView: React.FC = () => {
       </div>
     );
   }
-
-  // Dhivehi Tafsir PDF State
-  const [showDhivehiModal, setShowDhivehiModal] = useState(false);
-
-  // ... (existing helper functions) ...
-
-  const toggleDhivehiModal = () => setShowDhivehiModal(!showDhivehiModal);
-
-  // ...
 
   // List Mode (Top Bar modification)
   return (
