@@ -58,6 +58,17 @@ export const searchCity = async (query: string): Promise<{ lat: number, lng: num
   }
 };
 
+export const getQiblaDirection = async (lat: number, lng: number): Promise<number> => {
+  try {
+    const response = await fetch(`${ALADHAN_API_BASE}/qibla/${lat}/${lng}`);
+    const data = await response.json();
+    return data.data.direction;
+  } catch (error) {
+    console.error("Failed to fetch Qibla direction", error);
+    return 0;
+  }
+};
+
 export const fetchSurahList = async (): Promise<Surah[]> => {
   try {
     const headers = await getHeaders();
