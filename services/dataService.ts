@@ -140,14 +140,33 @@ export const fetchSurahDetails = async (surahNumber: number): Promise<{ arabic: 
       sajda: false
     }));
 
-    // Transliteration is tricky with the 'verses' endpoint without specific resource ID.
-    // We will leave it empty for now or use the fallback for it if critical.
+    // 4. Fetch Tafsir (Ibn Kathir English - Resource ID 169)
+    let mappedTafsir: Ayah[] = [];
+    try {
+      const tafsirRes = await fetch(`${QURAN_API_BASE}/quran/tafsirs/169?chapter_number=${surahNumber}`, { headers });
+      if (tafsirRes.ok) {
+        const tafsirData = await tafsirRes.json();
+        mappedTafsir = tafsirData.tafsirs.map((t: any) => ({
+          number: t.verse_key, // using verse_key as ID if needed, or index
+          text: t.text?.replace(/<[^>]*>/g, '') || '', // Clean HTML
+          numberInSurah: t.verse_number,
+          juz: 0,
+          page: 0,
+          manzil: 0,
+          ruku: 0,
+          hizbQuarter: 0,
+          sajda: false
+        }));
+      }
+    } catch (e) {
+      console.warn("Tafsir fetch failed:", e);
+    }
 
     return {
       arabic: mappedArabic,
       english: mappedEnglish,
-      transliteration: [], // TODO: Implement specific transliteration fetch if needed
-      tafsir: [] // TODO: Implement specific tafsir fetch
+      transliteration: [],
+      tafsir: mappedTafsir
     };
 
   } catch (error) {
