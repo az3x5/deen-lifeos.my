@@ -9,9 +9,9 @@ language plpgsql
 security definer -- Runs with privileges of creator (admin), needed to access networking
 as $$
 declare
-  client_id text := '492b1d4c-9d11-4290-80cc-76c6013c13f3';
-  client_secret text := 's0uQJBlpXO8~g25Il_yoUFkECE';
-  auth_endpoint text := 'https://prelive-oauth2.quran.foundation/oauth2/token';
+  client_id text := '50f20b0c-1ffa-485b-b495-fdeeaece65a9';
+  client_secret text := 'o5kkhl1gfvYgePGR.kQB9Qpv9m';
+  auth_endpoint text := 'https://oauth2.quran.foundation/oauth2/token';
   
   auth_header text;
   response http_response;

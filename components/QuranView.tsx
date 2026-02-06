@@ -156,7 +156,9 @@ export const QuranView: React.FC = () => {
 
       isPlaylistMode.current = playlistMode;
 
-      const url = `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${ayahNumber}.mp3`;
+      // Use selected reciter from settings
+      const reciterId = settings.reciterId || 'ar.alafasy';
+      const url = `https://cdn.islamic.network/quran/audio/128/${reciterId}/${ayahNumber}.mp3`;
       const audio = new Audio(url);
       audioRef.current = audio;
       audio.playbackRate = playbackRate;

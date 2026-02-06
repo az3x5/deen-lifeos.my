@@ -89,117 +89,101 @@ export const fetchSurahDetails = async (surahNumber: number): Promise<{ arabic: 
   try {
     const headers = await getHeaders();
 
-    // Fetch Verses with Uthmani Script, Translation (131 = The Clear Quran by Mustafa Khattab), and Transliteration
-    // Note: Pagination needs handling for large surahs, ideally implemented in UI, but fetching all for simple usage
-    // Quran.com limits 'per_page' to ~50. We might need to loop. 
-    // For simplicity in this demo, we fetch a large page size or loop. 
-    // Actually, let's fetch strictly what we need.
+    // Parallel Fetching from Multiple Sources
+    const results = await Promise.allSettled([
+      // 1. Arabic Text (Uthmani) - AlQuran.cloud (reliable)
+      fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}`),
 
-    // Fetch Arabic (Uthmani)
-    const arabicRes = await fetch(`${QURAN_API_BASE}/quran/verses/uthmani?chapter_number=${surahNumber}`, { headers });
-    const arabicData = await arabicRes.json();
+      // 2. Transliteration - AlQuran.cloud
+      fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.transliteration`),
 
-    // Fetch Translations (Example: 131 is Clear Quran)
-    const engRes = await fetch(`${QURAN_API_BASE}/quran/translations/131?chapter_number=${surahNumber}`, { headers });
-    const engData = await engRes.json();
+      // 3. Dhivehi Translation - FawazAhmed API (Specific JSON)
+      fetch(`https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/div-officeofthepres/${surahNumber}.json`),
 
-    // Fetch transliteration... Quran.com usually has a resource for this or includes it in verse fields.
-    // Using an alternative endpoint for fetching 'fields' might be better. 
-    // Let's use the /verses/by_chapter endpoint which is more powerful.
+      // 4. English Translation (Secondary/Backup) - AlQuran.cloud (Asad)
+      fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.asad`),
 
-    const response = await fetch(`${QURAN_API_BASE}/verses/by_chapter/${surahNumber}?per_page=300&fields=text_uthmani&translations=131&mushaf=2`, { headers });
-    // Note: per_page=300 might not cover Baqarah (286 ayahs), wait Baqarah is 286, so 300 covers it!
+      // 5. English Tafsir (Ibn Kathir - Resource 169) - Authenticated
+      fetch(`${QURAN_API_BASE}/quran/tafsirs/169?chapter_number=${surahNumber}`, { headers })
+    ]);
 
-    if (!response.ok) throw new Error("Failed");
-    const data = await response.json();
-
-    // Need transliteration? Quran.com API v4 might separate it. 
-    // Let's map what we have.
-
-    const mappedArabic: Ayah[] = data.verses.map((v: any) => ({
-      number: v.id, // Absolute ID
-      text: v.text_uthmani,
-      numberInSurah: v.verse_number,
-      juz: v.juz_number,
-      page: v.page_number,
-      manzil: 0, // Not always provided
-      ruku: 0,
-      // const headers = await getHeaders(); // Not used in this new logic
-
-      // 1. Fetch Arabic (AlQuran.cloud)
-      // 2. Fetch English (AlQuran.cloud)
-      // 3. Fetch Transliteration (AlQuran.cloud)
-      const results = await Promise.allSettled([
-        fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}`),
-        fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.asad`), // Example English translation
-        fetch(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.transliteration`),
-      ]);
-
-      const arabicResult = results[0];
-      if(arabicResult.status === 'rejected' || !arabicResult.value.ok) throw new Error("Fallback failed for Arabic");
-    const arabicData = await arabicResult.value.json();
-
-    let englishData = { data: { ayahs: [] } };
-    const englishResult = results[1];
-    if (englishResult.status === 'fulfilled' && englishResult.value.ok) {
-      try {
-        englishData = await englishResult.value.json();
-      } catch (e) { console.warn("Error parsing English data", e); }
+    // --- Arabic Data ---
+    const arabicResult = results[0];
+    if (arabicResult.status === 'rejected' || !arabicResult.value.ok) {
+      throw new Error("Failed to fetch Arabic text");
     }
+    const arabicJson = await arabicResult.value.json();
+    const arabicAyahs = arabicJson.data.ayahs;
 
-    let transData = { data: { ayahs: [] } };
-    const transResult = results[2];
+    // --- Transliteration Data ---
+    let transAyahs: any[] = [];
+    const transResult = results[1];
     if (transResult.status === 'fulfilled' && transResult.value.ok) {
       try {
-        transData = await transResult.value.json();
-      } catch (e) { console.warn("Error parsing transliteration data", e); }
+        const json = await transResult.value.json();
+        transAyahs = json.data.ayahs;
+      } catch (e) { console.warn("Transliteration parse error", e); }
     }
 
-    // 4. Fetch Dhivehi Translation (fawazahmed0 API)
-    let dhivehiMap = new Map<number, string>();
-    try {
-      const dhivehiRes = await fetch(`https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/div-officeofthepres/${surahNumber}.json`);
-      if (dhivehiRes.ok) {
-        const dhivehiJson = await dhivehiRes.json();
-        dhivehiJson.chapter.forEach((ayah: any) => {
-          dhivehiMap.set(ayah.verse, ayah.text);
-        });
+    // --- Dhivehi Data (Primary Translation) ---
+    const dhivehiMap = new Map<number, string>();
+    const dhivehiResult = results[2];
+    let hasDhivehi = false;
+
+    if (dhivehiResult.status === 'fulfilled' && dhivehiResult.value.ok) {
+      try {
+        const json = await dhivehiResult.value.json();
+        if (json.chapter && Array.isArray(json.chapter)) {
+          json.chapter.forEach((item: any) => {
+            dhivehiMap.set(item.verse, item.text);
+          });
+          hasDhivehi = true;
+        }
+      } catch (e) { console.warn("Dhivehi parse error", e); }
+    }
+
+    // --- English Data (Fallback) ---
+    let englishAyahs: any[] = [];
+    if (!hasDhivehi) {
+      const engResult = results[3];
+      if (engResult.status === 'fulfilled' && engResult.value.ok) {
+        try {
+          const json = await engResult.value.json();
+          englishAyahs = json.data.ayahs;
+        } catch (e) { console.warn("English parse error", e); }
       }
-    } catch (e) {
-      console.warn("Dhivehi fetch failed", e);
     }
 
-    // 5. Fetch Tafsir (English) - Placeholder or specific source
-    // Since reliable English JSON is hard to find, we will skip or use a static source if available.
-    let mappedTafsir: Ayah[] = [];
+    // --- Tafsir Data (English - Ibn Kathir) ---
+    const tafsirMap = new Map<number, string>();
+    const tafsirResult = results[4];
+    if (tafsirResult.status === 'fulfilled' && tafsirResult.value.ok) {
+      try {
+        // quran.com API format: { tafsirs: [ { resource_id, text, verse_key, ... } ] }
+        const tafsirJson = await tafsirResult.value.json();
+        if (tafsirJson.tafsirs && Array.isArray(tafsirJson.tafsirs)) {
+          tafsirJson.tafsirs.forEach((t: any) => {
+            // verse_key is "1:1"
+            const verseNum = parseInt(t.verse_key.split(':')[1]);
+            // clean HTML
+            const cleanText = t.text?.replace(/<[^>]*>/g, '').trim();
+            tafsirMap.set(verseNum, cleanText);
+          });
+        }
+      } catch (e) { console.warn("Tafsir parse error", e); }
+    }
 
-    // Mapping
-    const mappedArabic: Ayah[] = arabicData.data.ayahs.map((v: any) => ({
+    // --- Final Mapping ---
+    const mappedResponse: { arabic: Ayah[], english: Ayah[], transliteration: Ayah[], tafsir: Ayah[] } = {
+      arabic: [],
+      english: [],
+      transliteration: [],
+      tafsir: []
+    };
+
+    mappedResponse.arabic = arabicAyahs.map((v: any) => ({
       number: v.number,
       text: v.text,
-      numberInSurah: v.numberInSurah,
-      juz: v.juz,
-      page: v.page,
-      manzil: v.manzil,
-      ruku: v.ruku,
-      hizbQuarter: v.hizbQuarter,
-      sajda: v.sajda,
-      // Inject Dhivehi translation into the 'translation' field if we want it as primary, 
-      // OR we can add a new field. For now, let's append it or use it as the main translation 
-      // if the user prefers. Let's return it in a separate property via 'english' array but specifically marked?
-      // Actually, let's put it in the 'english' array but maybe we need a new 'dhivehi' array in the return type?
-      // The component expects 'english', 'arabic', 'transliteration'. 
-      // Let's repurpose 'english' or add 'dhivehi'.
-    }));
-
-    // We will return Dhivehi as the "Translation" (english array) for now, 
-    // or we should update the return type. 
-    // To support BOTH english and dhivehi, we need to update the interface.
-    // For now, I will Replace the "English" translation with Dhivehi as per user context (Maldivian app).
-
-    const mappedDhivehi: Ayah[] = arabicData.data.ayahs.map((v: any) => ({
-      number: v.number,
-      text: dhivehiMap.get(v.numberInSurah) || '',
       numberInSurah: v.numberInSurah,
       juz: v.juz,
       page: v.page,
@@ -209,16 +193,52 @@ export const fetchSurahDetails = async (surahNumber: number): Promise<{ arabic: 
       sajda: v.sajda
     }));
 
-    return {
-      arabic: mappedArabic,
-      english: mappedDhivehi, // Returning Dhivehi here
-      transliteration: transData.data?.ayahs || [],
-      tafsir: mappedTafsir
-    };
+    mappedResponse.english = arabicAyahs.map((v: any, index: number) => {
+      const text = hasDhivehi
+        ? (dhivehiMap.get(v.numberInSurah) || '')
+        : (englishAyahs[index]?.text || '');
+
+      return {
+        number: v.number,
+        text: text,
+        numberInSurah: v.numberInSurah,
+        juz: v.juz,
+        page: v.page,
+        manzil: v.manzil,
+        ruku: v.ruku,
+        hizbQuarter: v.hizbQuarter,
+        sajda: v.sajda
+      };
+    });
+
+    mappedResponse.transliteration = transAyahs.map((v: any) => ({
+      number: v.number,
+      text: v.text,
+      numberInSurah: v.numberInSurah,
+      juz: v.juz,
+      page: v.page,
+      manzil: v.manzil,
+      ruku: v.ruku,
+      hizbQuarter: v.hizbQuarter,
+      sajda: v.sajda
+    }));
+
+    mappedResponse.tafsir = arabicAyahs.map((v: any) => ({
+      number: v.number,
+      text: tafsirMap.get(v.numberInSurah) || '',
+      numberInSurah: v.numberInSurah,
+      juz: v.juz,
+      page: v.page,
+      manzil: v.manzil,
+      ruku: v.ruku,
+      hizbQuarter: v.hizbQuarter,
+      sajda: v.sajda
+    }));
+
+    return mappedResponse;
 
   } catch (error) {
-    console.error("Critical error fetching surah details via Quran.com", error);
-    // Fallback to AlQuran.cloud (old method) if new one fails
+    console.error("Error in fetchSurahDetails:", error);
     return await fallbackFetchSurahDetails(surahNumber);
   }
 };

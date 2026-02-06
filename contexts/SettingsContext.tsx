@@ -7,6 +7,7 @@ export interface AppSettings {
   showTranslation: boolean;
   showTransliteration: boolean;
   theme: 'light' | 'dark';
+  reciterId: string;
 }
 
 const defaultSettings: AppSettings = {
@@ -16,6 +17,7 @@ const defaultSettings: AppSettings = {
   showTranslation: true,
   showTransliteration: false,
   theme: 'light',
+  reciterId: 'ar.alafasy',
 };
 
 interface SettingsContextType {
@@ -40,7 +42,7 @@ export const SettingsProvider = ({ children }: { children?: ReactNode }) => {
   useEffect(() => {
     // Save to local storage whenever settings change
     localStorage.setItem('nur_settings', JSON.stringify(settings));
-    
+
     // Apply theme class to document
     const root = window.document.documentElement;
     if (settings.theme === 'dark') {
