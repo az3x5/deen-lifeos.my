@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Surah, Ayah } from '../types';
 import { fetchSurahList, fetchSurahDetails } from '../services/dataService';
-import { ChevronLeft, PlayCircle, PauseCircle, StopCircle, RefreshCw, ChevronDown, Play, Pause, X, SkipForward, BookOpenText, Search, FileText } from 'lucide-react';
+import { ChevronLeft, PlayCircle, PauseCircle, StopCircle, RefreshCw, ChevronDown, Play, Pause, X, SkipForward, BookOpenText, Search, FileText, Settings } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
-export const QuranView: React.FC = () => {
+export const QuranView: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSettings }) => {
   const [surahs, setSurahs] = useState<Surah[]>([]);
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
   const [ayahs, setAyahs] = useState<{ arabic: Ayah[], english: Ayah[], transliteration: Ayah[], tafsir: Ayah[] } | null>(null);
@@ -14,10 +14,6 @@ export const QuranView: React.FC = () => {
   // List States
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState(false);
-
-  // Dhivehi Tafsir PDF State
-  const [showDhivehiModal, setShowDhivehiModal] = useState(false);
-  const toggleDhivehiModal = () => setShowDhivehiModal(!showDhivehiModal);
 
   const [searchQuery, setSearchQuery] = useState('');
   const { settings } = useSettings();
@@ -484,11 +480,11 @@ export const QuranView: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Quran Kareem</h2>
           <button
-            onClick={toggleDhivehiModal}
-            className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-xl font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+            onClick={onOpenSettings}
+            className="p-3 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-emerald-200 dark:hover:border-emerald-700 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-lg transition-all shadow-sm flex items-center justify-center"
+            aria-label="Settings"
           >
-            <BookOpenText size={18} />
-            <span className="hidden sm:inline">Dhivehi Tafsir (PDF)</span>
+            <Settings size={24} />
           </button>
         </div>
 
@@ -503,69 +499,6 @@ export const QuranView: React.FC = () => {
           <Search className="absolute left-4 top-4 text-slate-400" size={20} />
         </div>
       </div>
-
-      {/* Dhivehi PDF Modal */}
-      {showDhivehiModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-lg w-full p-6 relative animate-in zoom-in-95 border border-slate-100 dark:border-slate-800">
-            <button onClick={toggleDhivehiModal} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-rose-500 rounded-full hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors">
-              <X size={20} />
-            </button>
-
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
-              <BookOpenText className="text-emerald-500" /> Dhivehi Tafsir
-            </h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-              Official Dhivehi translation and tafsir (PDF format). Select a volume to view.
-            </p>
-
-            <div className="space-y-3">
-              <a href="/tafsir/vol1.pdf" target="_blank" className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800 border border-transparent transition-all group">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white dark:bg-slate-700 p-2 rounded-lg text-rose-500 shadow-sm">
-                    <FileText size={20} />
-                  </div>
-                  <div className="text-left">
-                    <span className="block font-bold text-slate-700 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">Volume 1</span>
-                    <span className="text-xs text-slate-400">Chapters 1 - 10 (Approx)</span>
-                  </div>
-                </div>
-                <ChevronLeft className="rotate-180 text-slate-300 group-hover:text-emerald-500 transition-colors" size={20} />
-              </a>
-
-              <a href="/tafsir/vol2.pdf" target="_blank" className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800 border border-transparent transition-all group">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white dark:bg-slate-700 p-2 rounded-lg text-rose-500 shadow-sm">
-                    <FileText size={20} />
-                  </div>
-                  <div className="text-left">
-                    <span className="block font-bold text-slate-700 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">Volume 2</span>
-                    <span className="text-xs text-slate-400">Chapters 11 - 20 (Approx)</span>
-                  </div>
-                </div>
-                <ChevronLeft className="rotate-180 text-slate-300 group-hover:text-emerald-500 transition-colors" size={20} />
-              </a>
-
-              <a href="/tafsir/vol3.pdf" target="_blank" className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800 border border-transparent transition-all group">
-                <div className="flex items-center gap-3">
-                  <div className="bg-white dark:bg-slate-700 p-2 rounded-lg text-rose-500 shadow-sm">
-                    <FileText size={20} />
-                  </div>
-                  <div className="text-left">
-                    <span className="block font-bold text-slate-700 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">Volume 3</span>
-                    <span className="text-xs text-slate-400">Chapters 21 - 30 (Approx)</span>
-                  </div>
-                </div>
-                <ChevronLeft className="rotate-180 text-slate-300 group-hover:text-emerald-500 transition-colors" size={20} />
-              </a>
-            </div>
-
-            <p className="mt-4 text-xs text-center text-slate-400 dark:text-slate-500">
-              PDFs will open in a new tab.
-            </p>
-          </div>
-        </div>
-      )}
 
 
       {listLoading ? (

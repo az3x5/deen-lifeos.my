@@ -61,9 +61,9 @@ export default function App() {
   const renderContent = () => {
     switch (currentView) {
       case ViewState.DASHBOARD:
-        return <Dashboard prayerData={prayerData} loading={loadingLocation} onOpenSettings={() => setShowSettings(true)} />;
+        return <Dashboard prayerData={prayerData} loading={loadingLocation} />;
       case ViewState.QURAN:
-        return <QuranView />;
+        return <QuranView onOpenSettings={() => setShowSettings(true)} />;
       case ViewState.PRAYER:
         return <PrayerTimesView prayerData={prayerData} location={location} onLocationChange={handleLocationChange} />;
       case ViewState.DUA:
@@ -81,7 +81,7 @@ export default function App() {
       case ViewState.PROFILE:
         return <ProfileView />;
       default:
-        return <Dashboard prayerData={prayerData} loading={loadingLocation} onOpenSettings={() => setShowSettings(true)} />;
+        return <Dashboard prayerData={prayerData} loading={loadingLocation} />;
     }
   };
 

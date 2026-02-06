@@ -120,6 +120,8 @@ export const Sidebar: React.FC<NavigationProps> = ({ currentView, setView }) => 
 };
 
 export const MobileNav: React.FC<NavigationProps> = ({ currentView, setView }) => {
+  const { user, profile } = useAuth();
+
   const MobileItem = ({ view, icon: Icon, label }: { view: ViewState, icon: any, label: string }) => {
     const isActive = currentView === view;
     return (
@@ -144,7 +146,7 @@ export const MobileNav: React.FC<NavigationProps> = ({ currentView, setView }) =
 
   return (
     <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-t border-slate-200/60 dark:border-slate-800/60 pb-safe z-50 shadow-[0_-8px_20px_rgba(0,0,0,0.03)] transition-colors">
-      <div className="grid grid-cols-7 h-[72px] items-center px-1">
+      <div className="grid grid-cols-8 h-[72px] items-center px-1">
         <MobileItem view={ViewState.DASHBOARD} icon={Home} label="Home" />
         <MobileItem view={ViewState.QURAN} icon={BookOpen} label="Quran" />
         <MobileItem view={ViewState.PRAYER} icon={Calendar} label="Prayer" />
@@ -152,6 +154,7 @@ export const MobileNav: React.FC<NavigationProps> = ({ currentView, setView }) =
         <MobileItem view={ViewState.FIQH} icon={Scale} label="Fiqh" />
         <MobileItem view={ViewState.HADITH} icon={ScrollText} label="Hadith" />
         <MobileItem view={ViewState.BOOKMARKS} icon={Bookmark} label="Saved" />
+        <MobileItem view={user ? ViewState.PROFILE : ViewState.LOGIN} icon={UserCircle} label={user ? "Profile" : "Sign In"} />
       </div>
     </div>
   );
