@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Surah, Ayah } from '../types';
 import { fetchSurahList, fetchSurahDetails } from '../services/dataService';
-import { ChevronLeft, PlayCircle, PauseCircle, StopCircle, RefreshCw, ChevronDown, Play, Pause, X, SkipForward, BookOpenText, Search, FileText, Settings } from 'lucide-react';
+import { ChevronLeft, PlayCircle, PauseCircle, StopCircle, RefreshCw, ChevronDown, Play, Pause, X, SkipForward, BookOpenText, Search, FileText, Settings, Languages } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
+import { fetchTafsirEditions, fetchTafsirBySurah, TafsirEdition, TafsirSurah } from '../services/tafsirService';
 
 export const QuranView: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSettings }) => {
   const [surahs, setSurahs] = useState<Surah[]>([]);
@@ -25,8 +26,14 @@ export const QuranView: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSett
   const [isPaused, setIsPaused] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
 
-  // Tafsir State
+  // Tafsir State (Old - for display toggle)
   const [activeTafsir, setActiveTafsir] = useState<number | null>(null);
+
+  // New Tafsir API State
+  const [tafsirEditions, setTafsirEditions] = useState<TafsirEdition[]>([]);
+  const [selectedTafsirEdition, setSelectedTafsirEdition] = useState<string>('en-tafisr-ibn-kathir');
+  const [currentTafsir, setCurrentTafsir] = useState<TafsirSurah | null>(null);
+  const [showTafsirSelector, setShowTafsirSelector] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const isPlaylistMode = useRef<boolean>(false);
@@ -34,8 +41,14 @@ export const QuranView: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSett
 
   useEffect(() => {
     loadSurahs();
+    loadTafsirEditions();
     return () => stopAudio();
   }, []);
+
+  const loadTafsirEditions = async () => {
+    const editions = await fetchTafsirEditions();
+    setTafsirEditions(editions);
+  };
 
   useEffect(() => {
     ayahsRef.current = ayahs;
@@ -77,6 +90,12 @@ export const QuranView: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSett
       } else {
         setError("Failed to load Surah data. Please check your internet connection.");
         setAyahs(null);
+      }
+
+      // Fetch tafsir data
+      if (selectedTafsirEdition) {
+        const tafsirData = await fetchTafsirBySurah(selectedTafsirEdition, number);
+        setCurrentTafsir(tafsirData);
       }
     } catch (e) {
       setError("An unexpected error occurred.");
@@ -299,8 +318,9 @@ export const QuranView: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSett
                 const transliteration = ayahs.transliteration[index]?.text;
                 const translation = ayahs.english[index]?.text;
                 const tafsir = ayahs.tafsir[index]?.text;
+                const newTafsirText = currentTafsir?.verses?.find(v => v.ayah === ayah.numberInSurah)?.text;
                 const isTafsirOpen = activeTafsir === ayah.number;
-                const hasTafsir = Boolean(tafsir);
+                const hasTafsir = Boolean(tafsir || newTafsirText);
 
                 return (
                   <div
@@ -364,16 +384,26 @@ export const QuranView: React.FC<{ onOpenSettings: () => void }> = ({ onOpenSett
                     )}
 
                     {/* Tafsir Panel */}
-                    {isTafsirOpen && tafsir && (
-                      <div className="mt-8 pt-6 border-t-2 border-indigo-50 dark:border-indigo-900/30 animate-in fade-in slide-in-from-top-4">
-                        <h4 className="flex items-center gap-2 text-indigo-800 dark:text-indigo-300 font-bold text-sm uppercase tracking-wide mb-3">
-                          <BookOpenText size={16} /> Tafsir Ibn Kathir
-                        </h4>
-                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-6 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed text-sm md:text-base border border-indigo-100/50 dark:border-indigo-800/30 text-justify">
-                          {tafsir}
+                    {isTafsirOpen && (() => {
+                      // Get tafsir from new API
+                      const newTafsirText = currentTafsir?.verses?.find(v => v.ayah === ayah.numberInSurah)?.text;
+                      // Fallback to old tafsir if new one not available
+                      const displayTafsir = newTafsirText || tafsir;
+                      const tafsirSource = newTafsirText
+                        ? tafsirEditions.find(e => e.slug === selectedTafsirEdition)?.name || 'Tafsir'
+                        : 'Tafsir Ibn Kathir';
+
+                      return displayTafsir ? (
+                        <div className="mt-8 pt-6 border-t-2 border-indigo-50 dark:border-indigo-900/30 animate-in fade-in slide-in-from-top-4">
+                          <h4 className="flex items-center gap-2 text-indigo-800 dark:text-indigo-300 font-bold text-sm uppercase tracking-wide mb-3">
+                            <BookOpenText size={16} /> {tafsirSource}
+                          </h4>
+                          <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-6 rounded-2xl text-slate-700 dark:text-slate-300 leading-relaxed text-sm md:text-base border border-indigo-100/50 dark:border-indigo-800/30 text-justify">
+                            {displayTafsir}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ) : null;
+                    })()}
                   </div>
                 )
               })}
